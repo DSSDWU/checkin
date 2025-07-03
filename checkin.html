@@ -1,21 +1,51 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
-    <title>Check-in/Out</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>บันทึกเวลา</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style> #map { height: 180px; } </style>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <h2>บันทึกการเข้าร่วมกิจกรรม</h2>
-    <div id="map"></div>
-    <br>
-    <button id="takeSelfieBtn">1. ถ่ายรูปยืนยันตัวตน</button>
-    <input type="file" accept="image/*" capture="user" id="selfieInput" style="display:none;">
-    <img id="preview" width="150" style="display:none; margin-top:10px;">
-    <br><br>
-    <button id="checkinBtn" disabled>2. CHECK IN</button>
-    <p id="status"></p>
+<body class="bg-gray-50">
+    <div class="container mx-auto p-4 max-w-lg">
+        <!-- Header -->
+        <div class="text-center mb-4 p-4 bg-white rounded-lg shadow">
+            <h1 class="text-xl font-bold text-gray-800">บันทึกเวลาทำงาน</h1>
+            <p id="datetime" class="text-gray-500">Loading...</p>
+        </div>
+
+        <!-- Map -->
+        <div class="mb-4 rounded-lg shadow overflow-hidden">
+            <div id="map" style="height: 200px;"></div>
+        </div>
+
+        <!-- Selfie -->
+        <div id="selfie-section" class="mb-4 p-4 bg-white rounded-lg shadow text-center">
+            <img id="preview" class="hidden mx-auto mb-4 rounded-lg w-48 h-48 object-cover">
+            <button id="takeSelfieBtn" class="w-full px-4 py-3 font-semibold text-white bg-gray-700 rounded-md hover:bg-gray-800">
+                1. ถ่ายรูปยืนยันตัวตน
+            </button>
+            <input type="file" accept="image/*" capture="user" id="selfieInput" class="hidden">
+        </div>
+        
+        <!-- Action Buttons -->
+        <div id="action-buttons" class="hidden space-y-3 mb-4">
+             <button id="checkinBtn" class="w-full px-4 py-3 font-bold text-white bg-blue-600 rounded-md hover:bg-blue-700">Check In</button>
+             <button id="checkoutBtn" class="w-full px-4 py-3 font-bold text-white bg-orange-500 rounded-md hover:bg-orange-600">Check Out</button>
+             <button id="takeAnotherBtn" class="w-full px-4 py-2 font-semibold text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">< Take Another</button>
+        </div>
+        <p id="status" class="text-center text-sm h-4 mb-4"></p>
+
+        <!-- History -->
+        <div class="mt-6 p-4 bg-white rounded-lg shadow">
+            <h2 class="text-lg font-bold mb-4">ประวัติการลงเวลา</h2>
+            <div id="history-container" class="space-y-3">
+                <p class="text-gray-500">กำลังโหลดประวัติ...</p>
+            </div>
+        </div>
+    </div>
 
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
