@@ -59,30 +59,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         statusEl.className = 'text-center text-sm h-4 mb-4 text-gray-500';
         retryLocationSection.classList.add('hidden');
 
+        // Check if API is available first
+        if (!liff.isApiAvailable('getLocation')) {
+            statusEl.textContent = 'ฟังก์ชันตำแหน่งไม่พร้อมใช้งานบนอุปกรณ์นี้';
+            statusEl.className = 'text-center text-sm h-4 mb-4 text-red-500';
+            initializeMap(13.7563, 100.5018); // Default map
+            return;
+        }
+
         try {
-            // **NEW**: Check for geolocation permission first
             const permissionStatus = await liff.permission.query('geolocation');
             if (permissionStatus.state === 'granted') {
-                // Permission already granted
                 statusEl.textContent = 'กำลังระบุตำแหน่ง...';
                 currentLocation = await liff.getLocation();
                 initializeMap(currentLocation.latitude, currentLocation.longitude);
                 statusEl.textContent = ''; // Clear status on success
             } else if (permissionStatus.state === 'prompt') {
-                // Permission not granted, so request it
                 statusEl.textContent = 'กรุณาอนุญาตให้เข้าถึงตำแหน่ง';
                 await liff.permission.requestAll();
-                // After requesting, try fetching location again
-                await fetchLocation();
+                // After requesting, guide user to click the retry button
+                statusEl.textContent = 'ขอบคุณครับ! กรุณากด "ลองระบุตำแหน่งอีกครั้ง"';
+                retryLocationSection.classList.remove('hidden');
             } else { // 'denied'
-                throw new Error("คุณปฏิเสธการเข้าถึงตำแหน่ง กรุณาตรวจสอบการตั้งค่าสิทธิ์ของเว็บไซต์ในแอป LINE หรือเบราว์เซอร์");
+                throw new Error("คุณปฏิเสธการเข้าถึงตำแหน่ง! กรุณาเปิดสิทธิ์ใน การตั้งค่า > LINE > สิทธิ์ของแอป > ตำแหน่ง");
             }
         } catch (error) {
-            console.error(error);
-            statusEl.textContent = error.message || "ไม่สามารถเข้าถึงตำแหน่งได้";
+            console.error("Location Fetch Error:", error);
+            statusEl.textContent = error.message || "เกิดข้อผิดพลาดในการระบุตำแหน่ง";
             statusEl.className = 'text-center text-sm h-4 mb-4 text-red-500';
             retryLocationSection.classList.remove('hidden');
-            initializeMap(13.7563, 100.5018); // Default to Bangkok if failed
+            initializeMap(13.7563, 100.5018); // Default map
         }
     };
     
