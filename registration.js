@@ -1,7 +1,7 @@
-// --- แก้ไขค่าเหล่านี้ ---
+// --- CONFIGURATION (ข้อมูลของคุณถูกใส่ไว้แล้ว) ---
 const LIFF_ID = "2007679100-KAeXEz6B";
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzXnJIeHpqYt2225TzHPqUTwkfeoB6y8zLseDkbNJbgnYCeg4MbTUnyM0rm1HBz7C3y/exec";
-// --------------------
+// ------------------------------------------------
 
 document.addEventListener('DOMContentLoaded', () => {
     liff.init({ liffId: LIFF_ID })
@@ -10,17 +10,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 liff.login();
             }
         })
-        .catch(err => console.error(err));
+        .catch(err => console.error('LIFF Initialization failed', err));
 });
 
 document.getElementById('regForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    document.getElementById('status').innerText = "กำลังลงทะเบียน...";
+    const statusEl = document.getElementById('status');
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    statusEl.textContent = "กำลังลงทะเบียน...";
+    submitButton.disabled = true;
 
     try {
         const profile = await liff.getProfile();
         const lineUserId = profile.userId;
-
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
 
@@ -36,13 +38,18 @@ document.getElementById('regForm').addEventListener('submit', async (e) => {
         
         const result = await response.json();
         if (result.status === 'success') {
-             document.getElementById('status').innerText = "ลงทะเบียนสำเร็จ! กรุณากลับไปหน้าล็อกอิน";
+             statusEl.textContent = "ลงทะเบียนสำเร็จ! กรุณากลับไปหน้าล็อกอิน";
+             statusEl.className = "text-center text-green-500 text-sm h-4";
+             e.target.reset(); // Clear form
         } else {
-            throw new Error(result.message);
+            throw new Error(result.message || 'เกิดข้อผิดพลาด');
         }
 
     } catch (err) {
         console.error('Registration failed:', err);
-        document.getElementById('status').innerText = "เกิดข้อผิดพลาด: " + err.message;
+        statusEl.textContent = "เกิดข้อผิดพลาด: " + err.message;
+        statusEl.className = "text-center text-red-500 text-sm h-4";
+    } finally {
+        submitButton.disabled = false;
     }
 });
