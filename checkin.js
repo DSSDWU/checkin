@@ -55,21 +55,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const fetchLocation = async () => {
-        statusEl.textContent = 'กำลังระบุตำแหน่ง...';
+        statusEl.textContent = 'กำลังตรวจสอบสิทธิ์...';
         statusEl.className = 'text-center text-sm h-4 mb-4 text-gray-500';
         retryLocationSection.classList.add('hidden');
+
         try {
-            currentLocation = await liff.getLocation();
-            initializeMap(currentLocation.latitude, currentLocation.longitude);
-            statusEl.textContent = ''; // Clear status on success
+            // **NEW**: Check for geolocation permission first
+            const permissionStatus = await liff.permission.query('geolocation');
+            if (permissionStatus.state === 'granted') {
+                // Permission already granted
+                statusEl.textContent = 'กำลังระบุตำแหน่ง...';
+                currentLocation = await liff.getLocation();
+                initializeMap(currentLocation.latitude, currentLocation.longitude);
+                statusEl.textContent = ''; // Clear status on success
+            } else if (permissionStatus.state === 'prompt') {
+                // Permission not granted, so request it
+                statusEl.textContent = 'กรุณาอนุญาตให้เข้าถึงตำแหน่ง';
+                await liff.permission.requestAll();
+                // After requesting, try fetching location again
+                await fetchLocation();
+            } else { // 'denied'
+                throw new Error("คุณปฏิเสธการเข้าถึงตำแหน่ง กรุณาตรวจสอบการตั้งค่าสิทธิ์ของเว็บไซต์ในแอป LINE หรือเบราว์เซอร์");
+            }
         } catch (error) {
             console.error(error);
-            // Check for permission denied error
-            if (error.code === 20) { // 20 is PERMISSION_DENIED
-                statusEl.textContent = "คุณปฏิเสธการเข้าถึงตำแหน่ง! กรุณาตรวจสอบการตั้งค่า";
-            } else {
-                statusEl.textContent = "ไม่สามารถเข้าถึงตำแหน่งได้";
-            }
+            statusEl.textContent = error.message || "ไม่สามารถเข้าถึงตำแหน่งได้";
             statusEl.className = 'text-center text-sm h-4 mb-4 text-red-500';
             retryLocationSection.classList.remove('hidden');
             initializeMap(13.7563, 100.5018); // Default to Bangkok if failed
