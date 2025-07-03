@@ -46,12 +46,43 @@ document.addEventListener('DOMContentLoaded', async () => {
         datetimeEl.textContent = now.toLocaleDateString('th-TH', options).replace(' พ.ศ. ', '/').replace(' น.', ' AM');
     };
 
-    const initializeMap = (lat, lng) => {
+    const initializeMap = (lat, lng, zoom = 17) => {
         if (map) map.remove();
-        map = L.map(mapEl).setView([lat, lng], 17);
+        map = L.map(mapEl).setView([lat, lng], zoom);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         L.marker([lat, lng], { title: "You Are Here" }).addTo(map)
          .bindPopup('ตำแหน่งของคุณ').openPopup();
+    };
+    
+    const setLocation = (lat, lng) => {
+        currentLocation = { latitude: lat, longitude: lng };
+        initializeMap(lat, lng);
+        statusEl.textContent = ''; // Clear status on success
+        retryLocationSection.classList.add('hidden');
+    };
+
+    const handleError = (message) => {
+        console.error(message);
+        statusEl.textContent = message;
+        statusEl.className = 'text-center text-sm h-4 mb-4 text-red-500';
+        retryLocationSection.classList.remove('hidden');
+        initializeMap(13.7563, 100.5018, 10); // Default map, zoomed out
+    };
+
+    const tryWebGeolocation = () => {
+        statusEl.textContent = 'กำลังลองวิธีสำรอง (Web Geolocation)...';
+        if ('geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setLocation(position.coords.latitude, position.coords.longitude);
+                },
+                (error) => {
+                    handleError(`วิธีสำรองล้มเหลว: ${error.message}`);
+                }
+            );
+        } else {
+            handleError('เบราว์เซอร์นี้ไม่รองรับ Geolocation');
+        }
     };
 
     const fetchLocation = async () => {
@@ -59,36 +90,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         statusEl.className = 'text-center text-sm h-4 mb-4 text-gray-500';
         retryLocationSection.classList.add('hidden');
 
-        // Check if API is available first
         if (!liff.isApiAvailable('getLocation')) {
-            statusEl.textContent = 'ฟังก์ชันตำแหน่งไม่พร้อมใช้งานบนอุปกรณ์นี้';
-            statusEl.className = 'text-center text-sm h-4 mb-4 text-red-500';
-            initializeMap(13.7563, 100.5018); // Default map
+            handleError('ฟังก์ชันตำแหน่งของ LIFF ไม่พร้อมใช้งาน');
             return;
         }
 
         try {
             const permissionStatus = await liff.permission.query('geolocation');
             if (permissionStatus.state === 'granted') {
-                statusEl.textContent = 'กำลังระบุตำแหน่ง...';
-                currentLocation = await liff.getLocation();
-                initializeMap(currentLocation.latitude, currentLocation.longitude);
-                statusEl.textContent = ''; // Clear status on success
+                statusEl.textContent = 'กำลังระบุตำแหน่งผ่าน LIFF...';
+                const location = await liff.getLocation();
+                setLocation(location.latitude, location.longitude);
             } else if (permissionStatus.state === 'prompt') {
                 statusEl.textContent = 'กรุณาอนุญาตให้เข้าถึงตำแหน่ง';
                 await liff.permission.requestAll();
-                // After requesting, guide user to click the retry button
-                statusEl.textContent = 'ขอบคุณครับ! กรุณากด "ลองระบุตำแหน่งอีกครั้ง"';
+                statusEl.textContent = 'ขอบคุณครับ! กรุณากด "ลองอีกครั้ง"';
                 retryLocationSection.classList.remove('hidden');
             } else { // 'denied'
-                throw new Error("คุณปฏิเสธการเข้าถึงตำแหน่ง! กรุณาเปิดสิทธิ์ใน การตั้งค่า > LINE > สิทธิ์ของแอป > ตำแหน่ง");
+                throw new Error("ถูกปฏิเสธ! กรุณาเปิดสิทธิ์ใน การตั้งค่า > LINE > สิทธิ์");
             }
         } catch (error) {
-            console.error("Location Fetch Error:", error);
-            statusEl.textContent = error.message || "เกิดข้อผิดพลาดในการระบุตำแหน่ง";
-            statusEl.className = 'text-center text-sm h-4 mb-4 text-red-500';
-            retryLocationSection.classList.remove('hidden');
-            initializeMap(13.7563, 100.5018); // Default map
+            handleError(`LIFF ล้มเหลว: ${error.message}. กำลังลองวิธีสำรอง...`);
+            // *** FALLBACK to Web Geolocation API ***
+            tryWebGeolocation();
         }
     };
     
@@ -143,8 +167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 statusEl.textContent = `${action === 'checkin' ? 'Check In' : 'Check Out'} สำเร็จ!`;
                 statusEl.className = 'text-center text-sm h-4 mb-4 text-green-600';
                 await fetchHistory();
-                // Reset for next action
-                 setTimeout(() => {
+                setTimeout(() => {
                     takeAnotherBtn.click();
                     statusEl.textContent = '';
                 }, 2000);
@@ -163,7 +186,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     takeSelfieBtn.addEventListener('click', () => selfieInput.click());
     takeAnotherBtn.addEventListener('click', () => {
         selfieFile = null;
-        selfieInput.value = ''; // Clear the file input
+        selfieInput.value = '';
         previewEl.classList.add('hidden');
         selfieSection.classList.remove('hidden');
         actionButtons.classList.add('hidden');
