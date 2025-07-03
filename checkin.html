@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check-in/Out</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style> #map { height: 180px; } </style>
+</head>
+<body>
+    <h2>บันทึกการเข้าร่วมกิจกรรม</h2>
+    <div id="map"></div>
+    <br>
+    <button id="takeSelfieBtn">1. ถ่ายรูปยืนยันตัวตน</button>
+    <input type="file" accept="image/*" capture="user" id="selfieInput" style="display:none;">
+    <img id="preview" width="150" style="display:none; margin-top:10px;">
+    <br><br>
+    <button id="checkinBtn" disabled>2. CHECK IN</button>
+    <p id="status"></p>
+
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="checkin.js"></script>
+</body>
+</html>
