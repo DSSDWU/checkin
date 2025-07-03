@@ -17,6 +17,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const takeAnotherBtn = document.getElementById('takeAnotherBtn');
     const statusEl = document.getElementById('status');
     const historyContainer = document.getElementById('history-container');
+    const retryLocationSection = document.getElementById('retry-location-section');
+    const retryLocationBtn = document.getElementById('retryLocationBtn');
 
     let selfieFile = null;
     let currentLocation = null;
@@ -53,12 +55,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const fetchLocation = async () => {
+        statusEl.textContent = 'กำลังระบุตำแหน่ง...';
+        statusEl.className = 'text-center text-sm h-4 mb-4 text-gray-500';
+        retryLocationSection.classList.add('hidden');
         try {
             currentLocation = await liff.getLocation();
             initializeMap(currentLocation.latitude, currentLocation.longitude);
+            statusEl.textContent = ''; // Clear status on success
         } catch (error) {
             console.error(error);
-            statusEl.textContent = "ไม่สามารถเข้าถึงตำแหน่งได้";
+            // Check for permission denied error
+            if (error.code === 20) { // 20 is PERMISSION_DENIED
+                statusEl.textContent = "คุณปฏิเสธการเข้าถึงตำแหน่ง! กรุณาตรวจสอบการตั้งค่า";
+            } else {
+                statusEl.textContent = "ไม่สามารถเข้าถึงตำแหน่งได้";
+            }
+            statusEl.className = 'text-center text-sm h-4 mb-4 text-red-500';
+            retryLocationSection.classList.remove('hidden');
             initializeMap(13.7563, 100.5018); // Default to Bangkok if failed
         }
     };
@@ -88,8 +101,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const handleCheckinProcess = async (action) => {
-        if (!selfieFile || !currentLocation) {
-            alert("กรุณาถ่ายรูปและอนุญาตให้เข้าถึงตำแหน่งก่อน");
+        if (!selfieFile) {
+            alert("กรุณาถ่ายรูปก่อน");
+            return;
+        }
+        if (!currentLocation) {
+            alert("กรุณารอให้ระบบระบุตำแหน่งให้เสร็จสิ้น หรือกดปุ่ม 'ลองอีกครั้ง'");
             return;
         }
         statusEl.textContent = `กำลัง ${action === 'checkin' ? 'Check In' : 'Check Out'}...`;
@@ -108,13 +125,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (result.status === 'success') {
                 statusEl.textContent = `${action === 'checkin' ? 'Check In' : 'Check Out'} สำเร็จ!`;
+                statusEl.className = 'text-center text-sm h-4 mb-4 text-green-600';
                 await fetchHistory();
+                // Reset for next action
+                 setTimeout(() => {
+                    takeAnotherBtn.click();
+                    statusEl.textContent = '';
+                }, 2000);
             } else {
                 throw new Error(result.message);
             }
         } catch (error) {
             console.error(`Process failed:`, error);
             statusEl.textContent = `เกิดข้อผิดพลาด: ${error.message}`;
+            statusEl.className = 'text-center text-sm h-4 mb-4 text-red-500';
             actionButtons.classList.remove('hidden');
         }
     };
@@ -123,14 +147,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     takeSelfieBtn.addEventListener('click', () => selfieInput.click());
     takeAnotherBtn.addEventListener('click', () => {
         selfieFile = null;
+        selfieInput.value = ''; // Clear the file input
         previewEl.classList.add('hidden');
         selfieSection.classList.remove('hidden');
         actionButtons.classList.add('hidden');
     });
+    retryLocationBtn.addEventListener('click', fetchLocation);
 
     selfieInput.addEventListener('change', (event) => {
-        selfieFile = event.target.files[0];
-        if (selfieFile) {
+        if (event.target.files && event.target.files.length > 0) {
+            selfieFile = event.target.files[0];
             previewEl.src = URL.createObjectURL(selfieFile);
             previewEl.classList.remove('hidden');
             selfieSection.classList.add('hidden');
